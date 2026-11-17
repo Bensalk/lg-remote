@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <!-- Background -->
+  <rect width="192" height="192" rx="40" fill="#0d0d1a"/>
+  <!-- Remote body -->
+  <rect x="62" y="20" width="68" height="152" rx="20" fill="#1e1e2e" stroke="#a855f7" stroke-width="3"/>
+  <!-- Power button -->
+  <circle cx="96" cy="52" r="12" fill="#7c3aed"/>
+  <line x1="96" y1="44" x2="96" y2="52" stroke="white" stroke-width="3" stroke-linecap="round"/>
+  <path d="M86 46 A14 14 0 1 0 106 46" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"/>
+  <!-- D-pad circle -->
+  <circle cx="96" cy="104" r="22" fill="#2d1252" stroke="#7c3aed" stroke-width="2"/>
+  <!-- D-pad arrows -->
+  <polygon points="96,86 91,94 101,94" fill="#d8b4fe"/>
+  <polygon points="96,122 91,114 101,114" fill="#d8b4fe"/>
+  <polygon points="78,104 86,99 86,109" fill="#d8b4fe"/>
+  <polygon points="114,104 106,99 106,109" fill="#d8b4fe"/>
+  <!-- OK dot -->
+  <circle cx="96" cy="104" r="6" fill="#a855f7"/>
+  <!-- Volume dots -->
+  <rect x="70" y="140" width="18" height="8" rx="4" fill="#333"/>
+  <rect x="104" y="140" width="18" height="8" rx="4" fill="#333"/>
+  <!-- Home button -->
+  <rect x="84" y="156" width="24" height="8" rx="4" fill="#4c1d95"/>
+</svg>
