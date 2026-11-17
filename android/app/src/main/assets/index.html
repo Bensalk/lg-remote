@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1">
+  <meta name="theme-color" content="#a855f7">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="LG Remote">
+  <link rel="manifest" href="manifest.json">
+  <title>LG Remote</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body {
+      background: #0d0d1a;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 12px 32px;
+      user-select: none;
+    }
+    h1 { font-size: 18px; font-weight: 700; color: #a855f7; letter-spacing: 1px; margin-bottom: 4px; }
+    #status {
+      font-size: 11px; color: #555; margin-bottom: 10px;
+      padding: 3px 12px; border-radius: 20px; background: #1a1a2e;
+      transition: all 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px;
+    }
+    #status.connected { color: #22c55e; background: #052e16; }
+    #status.error     { color: #f87171; background: #2d0e0e; }
+    #status.pairing   { color: #fbbf24; background: #2d1f00; }
+
+    #setup { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 300px; margin-bottom: 10px; }
+    #setup input {
+      background: #1e1e2e; border: 1px solid #333; border-radius: 10px;
+      color: #fff; font-size: 15px; padding: 9px 14px; outline: none; width: 100%;
+    }
+    #setup input:focus { border-color: #a855f7; }
+    #connect-btn {
+      width: 100%; height: 42px; background: #4c1d95; border: 1px solid #a855f7;
+      border-radius: 10px; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer;
+    }
+    #connect-btn:active { background: #5b21b6; transform: scale(0.98); }
+
+    .remote { width: 100%; max-width: 300px; display: flex; flex-direction: column; gap: 8px; }
+
+    .row { display: flex; gap: 6px; justify-content: center; }
+
+    .btn {
+      background: #1e1e2e; border: 1px solid #2a2a3e;
+      border-radius: 12px; color: #ccc; cursor: pointer;
+      font-size: 14px; font-weight: 500;
+      min-width: 48px; height: 46px;
+      display: flex; align-items: center; justify-content: center;
+      flex: 1; touch-action: manipulation;
+      transition: background 0.08s, transform 0.08s;
+    }
+    .btn:active { background: #2a2a4e; transform: scale(0.93); }
+    .btn.red  { background: #3b0a0a; border-color: #dc2626; color: #f87171; }
+    .btn.red:active  { background: #550f0f; }
+    .btn.purple { background: #2d1252; border-color: #9333ea; color: #d8b4fe; }
+    .btn.purple:active { background: #3b1a6e; }
+    .btn.green  { background: #052e16; border-color: #16a34a; color: #4ade80; }
+    .btn.green:active  { background: #0a4a24; }
+    .btn.icon { font-size: 18px; }
+    .btn.sm { font-size: 12px; }
+
+    /* D-pad */
+    .dpad-wrap { position: relative; width: 172px; height: 172px; margin: 0 auto; }
+    .dpad-wrap .btn {
+      position: absolute; width: 52px; height: 52px; border-radius: 14px;
+      flex: unset; min-width: unset;
+    }
+    .dpad-wrap .d-up    { top: 0;    left: 50%; transform: translateX(-50%); font-size: 18px; }
+    .dpad-wrap .d-down  { bottom: 0; left: 50%; transform: translateX(-50%); font-size: 18px; }
+    .dpad-wrap .d-left  { top: 50%;  left: 0;   transform: translateY(-50%); font-size: 18px; }
+    .dpad-wrap .d-right { top: 50%;  right: 0;  transform: translateY(-50%); font-size: 18px; }
+    .dpad-wrap .d-ok {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 58px; height: 58px; border-radius: 50%;
+      background: #1a1035; border-color: #7c3aed; color: #d8b4fe; font-size: 13px; font-weight: 700;
+    }
+    .dpad-wrap .btn:active { background: #2a2a4e; transform: translateX(-50%) scale(0.9); }
+    .dpad-wrap .d-left:active { transform: translateY(-50%) scale(0.9); }
+    .dpad-wrap .d-right:active { transform: translateY(-50%) scale(0.9); }
+    .dpad-wrap .d-ok:active { transform: translate(-50%, -50%) scale(0.93); }
+
+    /* Numpad */
+    .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .numpad .btn { min-width: unset; flex: unset; font-size: 18px; font-weight: 600; }
+
+    .divider { width: 100%; height: 1px; background: #1e1e2e; }
+    .section { font-size: 10px; color: #444; text-transform: uppercase; letter-spacing: 1.5px; text-align: center; }
+
+    /* Keyboard / text input */
+    .kb-row { display: flex; gap: 6px; align-items: stretch; }
+    #tv-text {
+      flex: 1; background: #1e1e2e; border: 1px solid #3b3b5e; border-radius: 10px;
+      color: #fff; font-size: 15px; padding: 10px 12px; outline: none;
+      user-select: auto; -webkit-user-select: auto;
+    }
+    #tv-text:focus { border-color: #a855f7; }
+    .kb-send { flex-shrink: 0; }
+
+    /* Colour dots */
+    .dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; margin: 0 1px; }
+
+    /* Tab bar */
+    .tabs {
+      display: flex; gap: 0; border-radius: 12px; overflow: hidden;
+      border: 1px solid #2a2a3e; margin-bottom: 8px; width: 100%; max-width: 300px;
+    }
+    .tab {
+      flex: 1; padding: 8px 4px; background: #1a1a2e; color: #666;
+      font-size: 12px; font-weight: 600; text-align: center; cursor: pointer;
+      border: none; transition: all 0.15s;
+    }
+    .tab.active { background: #2d1252; color: #d8b4fe; }
+    .tab:active { background: #3b1a6e; }
+
+    .panel { display: none; width: 100%; max-width: 300px; }
+    .panel.active { display: flex; flex-direction: column; gap: 8px; }
+  </style>
+</head>
+<body>
+
+  <h1>ðº LG Remote</h1>
+  <div id="status">Disconnected</div>
+
+  <div id="setup">
+    <input type="text" id="tv-ip" value="192.168.1.37" placeholder="TV IP Address" inputmode="decimal">
+    <button id="connect-btn" onclick="connect()">Connect to TV</button>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('remote')">Remote</button>
+    <button class="tab" onclick="switchTab('keyboard')">Keyboard</button>
+    <button class="tab" onclick="switchTab('apps')">Apps</button>
+  </div>
+
+  <!-- REMOTE TAB -->
+  <div class="panel active" id="tab-remote">
+    <div class="remote">
+
+      <!-- Power / HDMI / Input -->
+      <div class="row">
+        <button class="btn red icon" onclick="send('ssap://system/turnOff')" style="flex:0.6">â»</button>
+        <button class="btn sm" onclick="switchHdmi(1)">HDMI 1</button>
+        <button class="btn sm" onclick="switchHdmi(2)">HDMI 2</button>
+        <button class="btn sm" onclick="send('ssap://tv/switchInput')">Input</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Volume + Channel -->
+      <div class="row">
+        <button class="btn icon" onclick="send('ssap://audio/volumeDown')">ð</button>
+        <button class="btn icon" onclick="toggleMute()">ð</button>
+        <button class="btn icon" onclick="send('ssap://audio/volumeUp')">ð</button>
+      </div>
+      <div class="row">
+        <button class="btn sm" onclick="send('ssap://tv/channelDown')">CH â¼</button>
+        <button class="btn sm" onclick="send('ssap://tv/channelUp')">CH â²</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- D-Pad -->
+      <div class="section">Navigate</div>
+      <div class="dpad-wrap">
+        <button class="btn d-up"    onclick="key('UP')">â²</button>
+        <button class="btn d-left"  onclick="key('LEFT')">â</button>
+        <button class="btn d-ok"    onclick="key('ENTER')">OK</button>
+        <button class="btn d-right" onclick="key('RIGHT')">â¶</button>
+        <button class="btn d-down"  onclick="key('DOWN')">â¼</button>
+      </div>
+      <div class="row">
+        <button class="btn sm" onclick="key('BACK')">â Back</button>
+        <button class="btn sm" onclick="key('HOME')">ð  Home</button>
+        <button class="btn sm" onclick="key('EXIT')">â Exit</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Media -->
+      <div class="section">Media</div>
+      <div class="row">
+        <button class="btn icon" onclick="key('REWIND')">â®</button>
+        <button class="btn icon" onclick="send('ssap://media.controls/play')">â¶</button>
+        <button class="btn icon" onclick="send('ssap://media.controls/pause')">â¸</button>
+        <button class="btn icon" onclick="key('FASTFORWARD')">â­</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Number pad -->
+      <div class="section">Numbers</div>
+      <div class="numpad">
+        <button class="btn" onclick="key('1')">1</button>
+        <button class="btn" onclick="key('2')">2</button>
+        <button class="btn" onclick="key('3')">3</button>
+        <button class="btn" onclick="key('4')">4</button>
+        <button class="btn" onclick="key('5')">5</button>
+        <button class="btn" onclick="key('6')">6</button>
+        <button class="btn" onclick="key('7')">7</button>
+        <button class="btn" onclick="key('8')">8</button>
+        <button class="btn" onclick="key('9')">9</button>
+        <button class="btn sm" style="color:#555" onclick="key('DASH')">â</button>
+        <button class="btn" onclick="key('0')">0</button>
+        <button class="btn icon sm" style="color:#555" onclick="key('INFO')">â¹</button>
+      </div>
+
+      <!-- Colour buttons -->
+      <div class="row">
+        <button class="btn" style="background:#1a0a0a;border-color:#dc2626;color:#f87171;font-size:12px" onclick="key('RED')">â RED</button>
+        <button class="btn" style="background:#0a1a0a;border-color:#16a34a;color:#4ade80;font-size:12px" onclick="key('GREEN')">â GRN</button>
+        <button class="btn" style="background:#0a0a1a;border-color:#2563eb;color:#60a5fa;font-size:12px" onclick="key('YELLOW')">â YLW</button>
+        <button class="btn" style="background:#1a1500;border-color:#ca8a04;color:#fde047;font-size:12px" onclick="key('BLUE')">â BLU</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- KEYBOARD TAB -->
+  <div class="panel" id="tab-keyboard">
+    <div class="remote">
+      <div class="section" style="font-size:12px;color:#888;text-align:left;padding:4px 2px">
+        Type text â sends to TV (YouTube search, etc.)
+      </div>
+
+      <!-- Text input -->
+      <div class="kb-row">
+        <input type="text" id="tv-text" placeholder="Type hereâ¦" autocorrect="off" autocapitalize="off" spellcheck="false">
+        <button class="btn kb-send green" style="width:52px;flex:0 0 52px" onclick="sendText()">Send</button>
+      </div>
+      <div class="row">
+        <button class="btn sm" onclick="deleteChar()">â« Delete</button>
+        <button class="btn sm" onclick="clearAllText()">â Clear All</button>
+        <button class="btn sm" onclick="key('ENTER')">âµ Enter</button>
+      </div>
+
+      <div class="divider"></div>
+      <div class="section">Navigate while typing</div>
+      <div class="dpad-wrap">
+        <button class="btn d-up"    onclick="key('UP')">â²</button>
+        <button class="btn d-left"  onclick="key('LEFT')">â</button>
+        <button class="btn d-ok"    onclick="key('ENTER')">OK</button>
+        <button class="btn d-right" onclick="key('RIGHT')">â¶</button>
+        <button class="btn d-down"  onclick="key('DOWN')">â¼</button>
+      </div>
+      <div class="row">
+        <button class="btn sm" onclick="key('BACK')">â Back</button>
+        <button class="btn sm" onclick="key('HOME')">ð  Home</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- APPS TAB -->
+  <div class="panel" id="tab-apps">
+    <div class="remote">
+      <div class="section" style="font-size:12px;color:#888;text-align:left;padding:4px 2px">
+        Quick launch
+      </div>
+      <div class="row">
+        <button class="btn" style="font-size:13px" onclick="launch('youtube.leanback.v4')">â¶ YouTube</button>
+        <button class="btn" style="font-size:13px" onclick="launch('netflix')">ð¬ Netflix</button>
+      </div>
+      <div class="row">
+        <button class="btn" style="font-size:13px" onclick="launch('amazon')">ð¦ Prime</button>
+        <button class="btn" style="font-size:13px" onclick="launch('hotstar')">ð Hotstar</button>
+      </div>
+      <div class="row">
+        <button class="btn" style="font-size:13px" onclick="launch('com.webos.app.browser')">ð Browser</button>
+        <button class="btn" style="font-size:13px" onclick="launch('com.webos.app.livetv')">ðº Live TV</button>
+      </div>
+      <div class="divider"></div>
+      <div class="section" style="font-size:12px;color:#888;text-align:left;padding:4px 2px">
+        Settings
+      </div>
+      <div class="row">
+        <button class="btn sm" onclick="send('ssap://com.webos.settingsservice/getSystemSettings',{ category:'picture'})">ð¨ Picture</button>
+        <button class="btn sm" onclick="send('ssap://com.webos.settingsservice/getSystemSettings',{category:'sound'})">ð Sound</button>
+        <button class="btn sm" onclick="key('MENU')">â Menu</button>
+      </div>
+      <div class="row">
+        <button class="btn" style="font-size:12px" onclick="send('ssap://tv/getChannelList')">ð Channel List</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(function(){});
+    }
+
+    var ws = null;
+    var inputWs = null;
+    var clientKey = localStorage.getItem('lg_client_key') || null;
+    var reqId = 0;
+    var pendingCbs = {};
+    var muteState = false;
+
+    function setStatus(msg, cls) {
+      var el = document.getElementById('status');
+      el.textContent = msg;
+      el.className = cls || '';
+    }
+
+    function switchTab(name) {
+      document.querySelectorAll('.tab').forEach(function(t, i) {
+        var names = ['remote','keyboard','apps'];
+        t.className = 'tab' + (names[i] === name ? ' active' : '');
+      });
+      document.querySelectorAll('.panel').forEach(function(p) {
+        p.className = 'panel' + (p.id === 'tab-' + name ? ' active' : '');
+      });
+    }
+
+    function connect() {
+      var ip = document.getElementById('tv-ip').value.trim();
+      if (!ip) return;
+      if (ws) { try { ws.close(); } catch(e){} ws = null; }
+      setStatus('Connecting to ' + ip + 'â¦', '');
+      try {
+        ws = new WebSocket('ws://' + ip + ':3000');
+      } catch(e) {
+        setStatus('Invalid IP address', 'error');
+        return;
+      }
+      ws.onopen = function () { setStatus('Registeringâ¦', 'pairing'); register(); };
+      ws.onmessage = function (e) { try { handleMsg(JSON.parse(e.data)); } catch(x){} };
+      ws.onerror = function () { setStatus('Error â same WiFi? IP correct?', 'error'); };
+      ws.onclose = function () {
+        if (inputWs) { try { inputWs.close(); } catch(e){} inputWs = null; }
+        setStatus('Disconnected', '');
+      };
+    }
+
+    function register() {
+      var payload = {
+        forcePairing: false,
+        pairingType: 'PROMPT',
+        manifest: {
+          manifestVersion: 1,
+          appVersion: '1.1',
+          signed: {
+            created: '20140509',
+            appId: 'com.lge.test',
+            vendorId: 'com.lge',
+            localizedAppNames: { '': 'LG Remote App' },
+            localizedVendorNames: { '': 'LG Electronics' },
+            permissions: [
+              'CONTROL_INPUT_TEXT','CONTROL_MOUSE_AND_KEYBOARD',
+              'READ_INSTALLED_APPS','CONTROL_POWER',
+              'READ_CURRENT_CHANNEL','READ_RUNNING_APPS',
+              'READ_LGE_TV_INPUT_EVENTS','READ_TV_CURRENT_TIME'
+            ],
+            serial: '2f930e2d2cfe083771f68e4fe7bb07'
+          },
+          permissions: [
+            'LAUNCH','LAUNCH_WEBAPP','APP_TO_APP','CLOSE',
+            'MASTERVOLUME_READ','MASTERVOLUME_WRITE','SUBSCRIBE',
+            'CONTROL_TV_SCREEN','CONTROL_TV_STANCY	
+          ],
+          signatures: [{
+            signatureVersion: 1,
+            signature: 'eyJhbGdvcml0aG0iOiJSU0EtU0hBMjU2Iiwia2V5SWQiOiJ0ZXN0LXNpZ25pbmctY2VydCIsInNpZ25hdHVyZVZlcnNpb24iOjF9.hrVRgjCW_v4J8Vjil7AXnAgpTpNl2j95A39kFEaW2wNT2gv-V8JYMoX5mfXhucBBdPgNUEWqeJfJjkxkDJkI3Gf-EVloWP4a9kBMnXEMPVOUVHEnNVuSHCMEOk3lRdFkJNFEXr4bZ_XxiElXO7I6gJSEHJCDa4E5pSZw6kFbHHHm2vFrJMp6p1UfxBqv4bnIvYbvp76F4E0BPZAQOO6w'
+          }]
+        }
+      };
+      if (clientKey) payload['client-key') = clientKey;
+      ws.send(JSON.stringify({ type: 'register', id: 'register_0', payload: payload }));
+    }
+
+    function handleMsg(msg) {
+      if (msg.type === 'registered') {
+        clientKey = msg.payload['client-key'];
+        localStorage.setItem('lg_client_key', clientKey);
+        setStatus('Connected â(â ' + document.getElementById('tv-ip').value, 'connected');
+        getInputSocket();
+        return;
+      }
+      if (msg.id === 'register_0' && msg.payload && msg.payload.pairingType === 'PROMPT') {
+        setStatus('Accept on TV screenâ¦', 'pairing');
+        return;
+      }
+      if (msg.id && pendingCbs[msg.id]) {
+        pendingCbs[msg.id](msg);
+        delete pendingCbs[msg.id];
+      }
+    }
+
+    function send(uri, payload) {
+      if (!ws || ws.readyState !== 1) { setStatus('Not connected â tap Connect', 'error'); return; }
+      var id = 'req_' + (++reqId);
+      var msg = { type: 'request', id: id, uri: uri };
+      if (payload) msg.payload = payload;
+      ws.send(JSON.stringify(msg));
+    }
+
+    function sendCb(uri, payload, cb) {
+      if (!ws || ws.readyState !== 1) return;
+      var id = 'req_' + (++reqId);
+      pendingCbs[id] = cb;
+      var msg = { type: 'request', id: id, uri: uri };
+      if (payload) msg.payload = payload;
+      ws.send(JSON.stringify(msg));
+    }
+
+    function getInputSocket() {
+      sendCb('ssap://com.webos.service.networkinput/getPointerInputSocket', null, function (msg) {
+        if (msg.payload && msg.payload.socketPath) {
+          try {
+            inputWs = new WebSocket(msg.payload.socketPath);
+            inputWs.onerror = function() { inputWs = null; };
+          } catch(e) { inputWs = null; }
+        }
+      });
+    }
+
+    function key(name) {
+      if (inputWs && inputWs.readyState === 1) {
+        inputWs.send('type:button\nname:' + name + '\n\n');
+      }
+    }
+
+    function toggleMute() {
+      muteState = !muteState;
+      send('ssap://audio/setMute', { mute: muteState });
+    }
+
+    function switchHdmi(n) {
+      var ids = { 1: 'com.webos.app.hdmi1', 2: 'com.webos.app.hdmi2', 3: 'com.webos.app.hdmi3', 4: 'com.webos.app.hdmi4' };
+      send('ssap://com.webos.applicationManager/launch', { id: ids[n] || ids[1] });
+    }
+
+    function launch(appId) {
+      var map = {
+        'youtube.leanback.v4': youtube.leanback.v4',
+        'netflix': 'netflix',
+        'amazon': 'amazon',
+        'hotstar': 'hotstar'
+      };
+      var id = map[appId] || appId;
+      send('ssap://com.webos.applicationManager/launch', { id: id });
+    }
+
+    // Text input
+    function sendText() {
+      var val = document.getElementById('tv-text').value;
+      if (!val) return;
+      send('ssap://com.webos.service.ime/insertText', { text: val, replace: 0 });
+      document.getElementById('tv-text').value = '';
+    }
+
+    function deleteChar() {
+      send('ssap://com.webos.service.ime/deleteCharacters', { count: 1 });
+    }
+
+    function clearAllText() {
+      send('ssap://com.webos.service.ime/deleteCharacters', { count: 200 });
+    }
+
+    // Allow Enter key in text input to send
+    document.getElementById('tv-text').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); sendText(); }
+    });
+
+    // Auto-connect if key was saved
+    if (clientKey) {
+      setTimeout(connect, 400);
+    }
+  </script>
+</body>
+</html>
